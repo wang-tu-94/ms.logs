@@ -1,47 +1,42 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'com.google.protobuf'
+    id 'maven-publish'
 }
 
 dependencies {
-    implementation 'io.grpc:grpc-protobuf:1.65.0'
-    implementation 'io.grpc:grpc-stub:1.65.0'
+    // Utilisation des variables root pour garantir l'alignement
+    api "io.grpc:grpc-protobuf:${grpcVersion}"
+    api "io.grpc:grpc-stub:${grpcVersion}"
     implementation 'jakarta.annotation:jakarta.annotation-api:3.0.0'
     compileOnly 'org.apache.tomcat:annotations-api:6.0.53'
 }
 
 protobuf {
-    protoc {
-        artifact = "com.google.protobuf:protoc:3.25.1"
-    }
-    plugins {
-        grpc {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.65.0"
+    protoc { artifact = "com.google.protobuf:protoc:${protobufVersion}" }
+    plugins { grpc { artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}" } }
+    generateProtoTasks { all()*.plugins { grpc {} } }
+}
+
+bootJar { enabled = false }
+jar { enabled = true ; archiveClassifier = '' }
+
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            // FORCE l'écriture des versions résolues dans le POM
+            versionMapping {
+                usage('java-api') { fromResolutionOf('runtimeClasspath') }
+                usage('java-runtime') { fromResolutionOf('runtimeClasspath') }
+            }
         }
     }
-    generateProtoTasks {
-        all()*.plugins {
-            grpc {}
-        }
-    }
 }
 
-// On désactive la tâche qui cherche une classe Main
-bootJar {
-    enabled = false
+sourceSets {
+    main { java { srcDirs 'build/generated/source/proto/main/java', 'build/generated/source/proto/main/grpc' } }
 }
-
-// On active la création d'un JAR classique (bibliothèque)
-jar {
-    enabled = true
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-
-tasks.withType(JavaCompile) {
-    options.release = 21
-}
+tasks.withType(GenerateModuleMetadata) { enabled = false }

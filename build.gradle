@@ -6,7 +6,7 @@ plugins {
 }
 
 allprojects {
-	group = 'com.my-project.log'
+	group = 'com.myproject.log'
 	version = '1.0.0'
 
 	repositories {
@@ -14,16 +14,28 @@ allprojects {
 	}
 }
 
+ext {
+	grpcVersion = '1.65.0'
+	protobufVersion = '3.25.1'
+	springGrpcStarterVersion = '3.1.0.RELEASE'
+}
+
 subprojects {
 	apply plugin: 'java'
 	apply plugin: 'io.spring.dependency-management'
-	apply plugin: 'org.springframework.boot' // <--- AJOUTE ÇA ICI
+	apply plugin: 'org.springframework.boot'
 
-	// C'est cette ligne qui manque !
-	// Elle dit à Gradle : "Utilise les versions de SB 4.0.0 pour TOUTES les dépendances starter"
 	dependencyManagement {
 		imports {
 			mavenBom "org.springframework.boot:spring-boot-dependencies:4.0.0"
+			mavenBom "io.grpc:grpc-bom:${grpcVersion}"
+		}
+	}
+
+	configurations.all {
+		resolutionStrategy.eachDependency { details ->
+			if (details.requested.group == 'io.grpc') { details.useVersion grpcVersion }
+			if (details.requested.group == 'com.google.protobuf') { details.useVersion protobufVersion }
 		}
 	}
 }

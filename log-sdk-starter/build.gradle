@@ -5,44 +5,37 @@ plugins {
     id 'maven-publish'
 }
 
-// IMPORTANT : On force la version de Java ici
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 
 dependencies {
-    // On utilise le BOM natif de Spring Boot 4
     api project(':proto-schema')
+    api("net.devh:grpc-client-spring-boot-starter:${springGrpcStarterVersion}")
+
+    api "io.grpc:grpc-netty-shaded"
+    api "io.grpc:grpc-inprocess"
 
     implementation 'org.springframework.boot:spring-boot-starter-aspectj'
-    implementation 'net.devh:grpc-client-spring-boot-starter:3.1.0.RELEASE'
-
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'io.grpc:grpc-testing:1.65.0'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-test {
-    useJUnitPlatform()
-    testLogging {
-        events "passed", "skipped", "failed"
-    }
-}
-
-// Configuration pour un module library
+// Configuration library
 bootJar { enabled = false }
-jar { enabled = true }
+jar {
+    enabled = true
+    archiveClassifier = ''
+}
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
-            artifactId = 'log-sdk-starter'
+            versionMapping {
+                usage('java-api') { fromResolutionOf('runtimeClasspath') }
+                usage('java-runtime') { fromResolutionOf('runtimeClasspath') }
+            }
         }
     }
 }
+
+tasks.withType(GenerateModuleMetadata) { enabled = false }

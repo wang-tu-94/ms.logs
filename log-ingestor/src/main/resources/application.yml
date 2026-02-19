@@ -9,7 +9,7 @@ spring:
       enabled: true
   kafka:
     enabled: true
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_SERVERS:kafka:29092}
     producer:
       batch-size: 32768
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -17,9 +17,19 @@ spring:
       properties:
         linger.ms: 10
       compression-type: "snappy"
+    admin:
+      properties:
+        # On donne plus de temps à l'AdminClient pour trouver Kafka au boot
+        request.timeout.ms: 20000
+        retry.backoff.ms: 500
+    properties:
+      acks: all
+      retries: 10
+      retry.backoff.ms: 1000
 grpc:
   server:
-    port: 9090
+    port: 50051
+    address: 0.0.0.0
 
 app:
   kafka:
