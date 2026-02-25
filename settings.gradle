@@ -1,4 +1,4 @@
-rootProject.name = 'ms.logs'
+rootProject.name = 'ms.logs.producer'
 
 include 'log-sdk-starter'
 include 'log-ingestor'
