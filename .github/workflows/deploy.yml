@@ -1,0 +1,91 @@
+name: CI/CD Java 21 Gradle Multi-Module
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  # ÉTAPE 1 : Détection intelligente des changements
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      proto: ${{ steps.filter.outputs.proto }}
+      sdk: ${{ steps.filter.outputs.sdk }}
+      server: ${{ steps.filter.outputs.server }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            proto:
+              - 'proto-schema/**'
+            sdk:
+              - 'log-sdk-starter/**'
+              - 'proto-schema/**' # Re-build le SDK si le proto change
+            server:
+              - 'log-ingestor/**'
+              - 'proto-schema/**' # Re-build le Server si le proto change
+
+  # ÉTAPE 2 : Build, Test et Déploiement
+  build-and-deploy:
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      # --- SECTION TESTS ---
+
+      - name: Run Proto-Schema Tests
+        if: needs.changes.outputs.proto == 'true'
+        run: ./gradlew :proto-schema:test
+
+      - name: Run SDK Tests
+        if: needs.changes.outputs.sdk == 'true'
+        run: ./gradlew :log-sdk-starter:test
+
+      - name: Run Server Tests
+        if: needs.changes.outputs.server == 'true'
+        run: ./gradlew :log-ingestor:test
+
+      # --- SECTION PUBLICATION (Nexus / Artifacts) ---
+
+#      - name: Publish Proto-Schema to Nexus
+#        if: success() && needs.changes.outputs.proto == 'true'
+#        run: ./gradlew :proto-schema:publish -x test
+#        env:
+#          ORG_GRADLE_PROJECT_nexusUsername: ${{ secrets.NEXUS_USER }}
+#          ORG_GRADLE_PROJECT_nexusPassword: ${{ secrets.NEXUS_PASS }}
+#
+#      - name: Publish SDK to Nexus
+#        if: success() && needs.changes.outputs.sdk == 'true'
+#        run: ./gradlew :log-sdk-starter:publish -x test
+#        env:
+#          ORG_GRADLE_PROJECT_nexusUsername: ${{ secrets.NEXUS_USER }}
+#          ORG_GRADLE_PROJECT_nexusPassword: ${{ secrets.NEXUS_PASS }}
+
+      # --- SECTION DOCKER (Server) ---
+
+      - name: Docker Login
+        if: success() && needs.changes.outputs.server == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Server Image
+        if: success() && needs.changes.outputs.server == 'true'
+        run: |
+          ./gradlew :log-ingestor:bootJar -x test
+          docker build -t magnomos/log-ingestor:latest ./log-ingestor
+          docker push magnomos/log-ingestor:latest
