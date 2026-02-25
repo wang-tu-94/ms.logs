@@ -87,5 +87,5 @@ jobs:
         if: success() && needs.changes.outputs.server == 'true'
         run: |
           ./gradlew :log-ingestor:bootJar -x test
-          docker build -t magnomos/log-ingestor:latest ./log-ingestor
+          docker build -t magnomos/log-ingestor:latest .
           docker push magnomos/log-ingestor:latest
