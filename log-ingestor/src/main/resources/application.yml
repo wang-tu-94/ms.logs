@@ -42,7 +42,7 @@ management:
         include: health, info, metrics, prometheus
   endpoint:
     health:
-      show-details: always # Pour voir l'état spécifique de Kafka
+      show-details: always
   health:
     probes:
       enabled: true
