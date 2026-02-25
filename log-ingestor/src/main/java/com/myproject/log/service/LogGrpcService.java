@@ -46,7 +46,6 @@ public class LogGrpcService extends LogServiceGrpc.LogServiceImplBase {
 
             @Override
             public void onCompleted() {
-                // On répond au SDK que tout est bien reçu
                 LogSummary summary = LogSummary.newBuilder()
                         .setLogsProcessed(counter.get())
                         .setStatus("SUCCESS")
